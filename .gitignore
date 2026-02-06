@@ -1,0 +1,28 @@
+# Secrets
+.env
+
+# Database
+data/flowers.db
+data/flowers.db-journal
+data/flowers.db-wal
+
+# Daily logs (generated)
+data/memory/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# pytest
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Bot runtime
+*.pid
+flowers-bot.log
+
+# Claude Code project memory (personal per-machine)
+.claude/
