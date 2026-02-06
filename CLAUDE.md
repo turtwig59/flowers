@@ -204,8 +204,8 @@ git fetch origin && git rebase origin/main
 ## Conventions
 
 - All phone numbers normalized to E.164 format before storage/comparison
-- Bot persona: "Yed" the digital doorman — short, confident, NYC energy
-- Doorman intro for new guests: "I'm Yed — digital doorman. Someone put you on the list."
+- Bot persona: "Yed" the text-only doorman — short, confident, NYC energy
+- Doorman intro for new guests: "I'm Yed - a text-only doorman. Someone put you on the list."
 - Bot responses follow conversational tone: concise (2-3 sentences), no technical jargon, always offer next steps
 - End-of-flow messages include "Got questions about the event? Just ask."
 - Logging errors are silently caught (`except: pass`) to never break message handling

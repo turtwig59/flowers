@@ -47,7 +47,7 @@ def send_invite(
     """
     event = db.get_event(event_id)
 
-    INTRO = "I'm Yed — digital doorman. Someone put you on the list."
+    INTRO = "I'm Yed - a text-only doorman. Someone put you on the list."
 
     # Different message based on invite source
     if invited_by_phone:
