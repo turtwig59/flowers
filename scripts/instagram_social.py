@@ -241,6 +241,42 @@ def _log_mutual(event_id: int, notified_id: int, about_id: int, notified_name: s
         pass
 
 
+def requeue_pending_jobs() -> int:
+    """Re-queue any IG follow jobs that are still pending (survived a bot restart).
+    Called once on startup to recover lost in-memory jobs."""
+    if os.environ.get('FLOWERS_TESTING'):
+        return 0
+
+    event = db.get_active_event()
+    if not event:
+        return 0
+
+    event_id = event['id']
+    count = 0
+
+    conn = db.get_connection()
+    try:
+        cursor = conn.execute(
+            "SELECT guest_id, handle FROM ig_follow_status WHERE event_id = ? AND status = 'pending'",
+            (event_id,)
+        )
+        for row in cursor.fetchall():
+            job = {
+                'event_id': event_id,
+                'guest_id': row['guest_id'],
+                'handle': row['handle'],
+            }
+            _job_queue.put(job)
+            count += 1
+    finally:
+        conn.close()
+
+    if count > 0:
+        _ensure_worker()
+
+    return count
+
+
 def get_social_graph_summary(event_id: int) -> str:
     """Format the social graph for host display."""
     connections = db.get_social_graph(event_id)

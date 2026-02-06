@@ -11,6 +11,7 @@ import sys
 import os
 import time
 from expiration_checker import run_expiration_checks
+from instagram_social import requeue_pending_jobs
 
 POLL_INTERVAL = 2
 
@@ -99,6 +100,14 @@ def main():
     chat_ids = [c["id"] for c in chats]
     last_id = get_global_last_id(chats)
     print(f"Monitoring {len(chat_ids)} chats, starting from message ID: {last_id}", flush=True)
+
+    # Re-queue any IG follow jobs that were lost on restart
+    try:
+        requeued = requeue_pending_jobs()
+        if requeued:
+            print(f"Re-queued {requeued} pending IG follow jobs", flush=True)
+    except Exception as e:
+        print(f"Error re-queuing IG jobs: {e}", flush=True)
 
     while True:
         try:
