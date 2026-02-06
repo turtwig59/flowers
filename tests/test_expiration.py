@@ -441,6 +441,101 @@ class TestPlusOneExpiration:
         assert state['state'] == 'idle'
 
 
+class TestInviterRefundOnExpiry:
+    """Tests for refunding inviter quota when their invitee's invite expires."""
+
+    def test_inviter_gets_quota_back(self, test_setup):
+        """When a +1 invite expires, the inviter gets their quota back."""
+        db = test_setup['db']
+        event_id = test_setup['event_id']
+        inviter_phone = "+12025554001"
+        invitee_phone = "+12025554002"
+
+        # Inviter accepts and goes through flow
+        send_invite(event_id, inviter_phone)
+        route_message(inviter_phone, "YES", event_id)
+        route_message(inviter_phone, "TestName", event_id)
+        route_message(inviter_phone, "skip", event_id)
+        route_message(inviter_phone, "YES", event_id)
+        route_message(inviter_phone, invitee_phone, event_id)
+
+        inviter = db.get_guest_by_phone(inviter_phone, event_id)
+        assert inviter['quota_used'] == 1
+
+        # Expire the invitee's invite
+        invitee = db.get_guest_by_phone(invitee_phone, event_id)
+        _set_invited_at(db, invitee['id'], INVITE_EXPIRE_SECONDS + 60)
+
+        check_invite_expirations()
+
+        # Invitee should be expired
+        invitee = db.get_guest_by_phone(invitee_phone, event_id)
+        assert invitee['status'] == 'expired'
+
+        # Inviter should have quota refunded
+        inviter = db.get_guest_by_phone(inviter_phone, event_id)
+        assert inviter['quota_used'] == 0
+
+    def test_no_refund_for_host_invite(self, test_setup):
+        """Host invites don't refund anyone (no invited_by_phone)."""
+        db = test_setup['db']
+        event_id = test_setup['event_id']
+        phone = "+12025554003"
+
+        send_invite(event_id, phone)
+        guest = db.get_guest_by_phone(phone, event_id)
+        _set_invited_at(db, guest['id'], INVITE_EXPIRE_SECONDS + 60)
+
+        check_invite_expirations()
+
+        guest = db.get_guest_by_phone(phone, event_id)
+        assert guest['status'] == 'expired'
+        # No crash — host invite has no inviter to refund
+
+
+class TestReinviteExpiredGuest:
+    """Tests for re-inviting expired guests."""
+
+    def test_reinvite_expired_guest(self, test_setup):
+        """An expired guest can be re-invited by another guest."""
+        db = test_setup['db']
+        event_id = test_setup['event_id']
+        inviter_phone = "+12025555001"
+        target_phone = "+12025555002"
+
+        # Set up inviter
+        send_invite(event_id, inviter_phone)
+        route_message(inviter_phone, "YES", event_id)
+        route_message(inviter_phone, "InviterName", event_id)
+        route_message(inviter_phone, "skip", event_id)
+        route_message(inviter_phone, "YES", event_id)
+        route_message(inviter_phone, target_phone, event_id)
+
+        # Expire the target's invite
+        target = db.get_guest_by_phone(target_phone, event_id)
+        _set_invited_at(db, target['id'], INVITE_EXPIRE_SECONDS + 60)
+        check_invite_expirations()
+
+        target = db.get_guest_by_phone(target_phone, event_id)
+        assert target['status'] == 'expired'
+
+        # Inviter got refund
+        inviter = db.get_guest_by_phone(inviter_phone, event_id)
+        assert inviter['quota_used'] == 0
+
+        # Now inviter re-invites the same person
+        response = route_message(inviter_phone, target_phone, event_id)
+        assert "sent" in response.lower()
+
+        # Target should be pending again
+        target = db.get_guest_by_phone(target_phone, event_id)
+        assert target['status'] == 'pending'
+
+        # Inviter quota used again
+        inviter = db.get_guest_by_phone(inviter_phone, event_id)
+        assert inviter['quota_used'] == 1
+
+
 class TestMergeConversationContext:
     """Test the merge_conversation_context helper."""
 

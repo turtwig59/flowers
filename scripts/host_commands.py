@@ -228,10 +228,17 @@ def handle_send_invites(event_id: int, phones: List[str]) -> str:
             # Check if already invited
             existing = db.get_guest_by_phone(phone, event_id)
             if existing:
-                already_invited += 1
+                if existing['status'] == 'expired':
+                    # Allow re-invite of expired guests
+                    import time as _time
+                    db.update_guest(existing['id'], status='pending',
+                                    invited_by_phone=None, invited_at=int(_time.time()))
+                    send_invite(event_id, phone)
+                    sent_count += 1
+                else:
+                    already_invited += 1
                 continue
 
-            # Send invite
             send_invite(event_id, phone)
             sent_count += 1
 

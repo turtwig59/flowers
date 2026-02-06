@@ -381,6 +381,9 @@ def handle_contact_submission(guest: Dict[str, Any], text: str, event_id: int, v
     # Check if already invited
     existing = db.get_guest_by_phone(normalized_phone, event_id)
     if existing:
+        if existing['status'] == 'expired':
+            # Allow re-invite of expired guests — reset their record and re-send
+            return _reinvite_expired_guest(guest, existing, event_id, normalized_phone)
         return RESPONSES['already_invited']
 
     # Use quota and create new guest
@@ -420,6 +423,41 @@ def handle_contact_submission(guest: Dict[str, Any], text: str, event_id: int, v
     except ValueError as e:
         # Quota error or other issue
         return str(e)
+
+
+def _reinvite_expired_guest(inviter: Dict[str, Any], expired_guest: Dict[str, Any], event_id: int, phone: str) -> str:
+    """Re-invite a guest whose previous invite expired."""
+    # Check quota
+    can_invite, reason = db.can_invite_plus_one(inviter['id'])
+    if not can_invite:
+        db.upsert_conversation_state(event_id, inviter['phone'], 'idle', {'quota_check_failed': reason})
+        return RESPONSES['quota_exceeded']
+
+    # Reset expired guest record with fresh invite timestamp
+    import time as _time
+    db.update_guest(expired_guest['id'], status='pending',
+                    invited_by_phone=inviter['phone'], invited_at=int(_time.time()))
+
+    # Use inviter's quota
+    db.update_guest(inviter['id'], quota_used=inviter['quota_used'] + 1)
+
+    # Re-send invite
+    from invite_sender import send_invite
+    send_invite(event_id, phone, invited_by_phone=inviter['phone'])
+
+    # Log
+    try:
+        event = db.get_event(event_id)
+        log_plus_one_used(event['name'], inviter.get('name', 'Unknown'), None, phone)
+    except:
+        pass
+
+    # Check remaining invites
+    updated_inviter = db.get_guest(inviter['id'])
+    db.upsert_conversation_state(event_id, inviter['phone'], 'idle', {'invited_plus_one': phone})
+    if updated_inviter['quota_used'] < 2:
+        return RESPONSES['invite_sent'] + "\n\nYou have one more invite. Want to invite someone else?"
+    return RESPONSES['invite_sent']
 
 
 def handle_faq(guest: Dict[str, Any], faq_type: str, event_id: int) -> str:

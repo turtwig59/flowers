@@ -32,6 +32,22 @@ def _send_message(phone, text):
         pass
 
 
+def _refund_inviter(event_id, expired_guest):
+    """Refund an invite to the person who invited the expired guest."""
+    inviter_phone = expired_guest.get('invited_by_phone')
+    if not inviter_phone:
+        return  # Host invite — no one to refund
+
+    inviter = db.get_guest_by_phone(inviter_phone, event_id)
+    if not inviter or inviter['quota_used'] <= 0:
+        return
+
+    db.update_guest(inviter['id'], quota_used=inviter['quota_used'] - 1)
+    inviter_name = expired_guest.get('name') or expired_guest['phone']
+    _send_message(inviter_phone,
+                  f"Your invite to {inviter_name} expired. You've got another invite to give.")
+
+
 def check_invite_expirations():
     """Check for expired invites and send warnings/expiry messages."""
     event = db.get_active_event()
@@ -65,6 +81,9 @@ def check_invite_expirations():
             db.update_guest(guest['id'], status='expired')
             db.upsert_conversation_state(event_id, guest['phone'], 'idle', {'expired': True})
             _send_message(guest['phone'], "Your invite expired. Maybe next time.")
+
+            # Refund the inviter's quota if this was a +1 invite
+            _refund_inviter(event_id, fresh_guest)
 
         elif elapsed >= INVITE_WARNING_SECONDS and not context.get('invite_warning_sent'):
             # Send warning

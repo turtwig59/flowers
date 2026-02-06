@@ -62,10 +62,11 @@ def send_invite(
             f"Reply YES to confirm or NO to decline."
         )
     else:
-        # Initial invite
+        # Initial invite (from host)
         message = (
             f"{INTRO}\n\n"
-            f"{event['name']} — {format_date(event['event_date'])}, {event['time_window']}.\n\n"
+            f"Rishab invited you to {event['name']} "
+            f"on {format_date(event['event_date'])}, {event['time_window']}.\n\n"
             f"Reply YES to confirm or NO to decline."
         )
 
