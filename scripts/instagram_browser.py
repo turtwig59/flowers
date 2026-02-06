@@ -186,42 +186,67 @@ class InstagramBrowser:
                 return None
 
             following_link.click()
-            time.sleep(2)
+            time.sleep(3)
 
-            # Scroll the modal to load all following
-            handles = set()
-            dialog = self._page.query_selector('div[role="dialog"]')
-            if not dialog:
-                return None
+            # Use in-browser JS to scroll and collect handles.
+            # This avoids Playwright element handle GC issues on large lists.
+            result = self._page.evaluate('''async () => {
+                const delay = ms => new Promise(r => setTimeout(r, ms));
 
-            scrollable = dialog.query_selector('div[style*="overflow"]') or dialog
-            prev_count = 0
-            stall_count = 0
+                const dialog = document.querySelector('div[role="dialog"]');
+                if (!dialog) return { error: 'no dialog' };
 
-            for _ in range(50):  # Max 50 scroll iterations
-                # Collect visible handles
-                links = dialog.query_selector_all('a[role="link"]')
-                for link in links:
-                    href = link.get_attribute('href')
-                    if href and href.startswith('/') and href.count('/') == 2:
-                        h = href.strip('/')
-                        if h and h not in ('explore', 'reels', 'direct'):
-                            handles.add(h.lower())
+                let scrollable = null;
+                const divs = dialog.querySelectorAll('div');
+                for (const d of divs) {
+                    const style = window.getComputedStyle(d);
+                    if ((style.overflowY === 'scroll' || style.overflowY === 'auto')
+                        && d.scrollHeight > d.clientHeight) {
+                        scrollable = d;
+                        break;
+                    }
+                }
+                if (!scrollable) return { error: 'no scrollable' };
 
-                if len(handles) == prev_count:
-                    stall_count += 1
-                    if stall_count >= 3:
-                        break
-                else:
-                    stall_count = 0
-                prev_count = len(handles)
+                const handles = new Set();
+                let prevCount = 0;
+                let stallCount = 0;
 
-                # Scroll down
-                scrollable.evaluate('el => el.scrollTop = el.scrollHeight')
-                time.sleep(1 + random.uniform(0.5, 1.5))
+                for (let i = 0; i < 800; i++) {
+                    const links = dialog.querySelectorAll('a[role="link"]');
+                    for (const link of links) {
+                        const href = link.getAttribute('href');
+                        if (href && href.startsWith('/')
+                            && (href.match(/\\//g) || []).length === 2) {
+                            const h = href.replace(/\\//g, '').toLowerCase();
+                            if (h && !['explore','reels','direct','accounts'].includes(h)) {
+                                handles.add(h);
+                            }
+                        }
+                    }
+
+                    if (handles.size === prevCount) {
+                        stallCount++;
+                        if (stallCount >= 10) break;
+                    } else {
+                        stallCount = 0;
+                    }
+                    prevCount = handles.size;
+
+                    scrollable.scrollTop = scrollable.scrollHeight;
+                    await delay(600 + Math.random() * 800);
+                }
+
+                return { handles: Array.from(handles), count: handles.size };
+            }''')
 
             self._save_session()
-            return list(handles)
+
+            if isinstance(result, dict) and 'error' in result:
+                logger.warning(f"Scrape dialog error: {result['error']}")
+                return None
+
+            return result.get('handles', [])
 
         except Exception as e:
             logger.error(f"Error scraping following for {handle}: {e}")
