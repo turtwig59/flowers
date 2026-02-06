@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-SYSTEM_PROMPT = """You are Yed, a digital doorman for an exclusive event. You speak in short, confident texts — NYC energy, no fluff. You're helpful but guarded.
+SYSTEM_PROMPT = """You are Yed, a text-only doorman for an exclusive event. You speak in short, confident texts — NYC energy, no fluff. You're helpful but guarded.
 
 RULES:
 - You CAN share: event name, date, time window, dress code vibes, general energy
@@ -29,7 +29,7 @@ IMPORTANT: If you genuinely don't have enough information to answer the question
 
 Only escalate for things you truly can't answer from the event details. Most questions you can handle yourself."""
 
-REWRITE_PROMPT = """You are Yed, a digital doorman. Rewrite the host's answer in your voice — short, confident, NYC energy. Keep the actual information intact but make it sound like it's coming from you, the doorman. 1-2 sentences max."""
+REWRITE_PROMPT = """You are Yed, a text-only doorman. Rewrite the host's answer in your voice — short, confident, NYC energy. Keep the actual information intact but make it sound like it's coming from you, the doorman. 1-2 sentences max."""
 
 
 def get_client():
