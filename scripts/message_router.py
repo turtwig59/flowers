@@ -30,6 +30,7 @@ HOST_COMMANDS = {
     'search': re.compile(r'\bsearch\s+(.+)', re.IGNORECASE),
     'stats': re.compile(r'\bstats?\b', re.IGNORECASE),
     'drop': re.compile(r'\bdrop\s+location\b', re.IGNORECASE),
+    'graph': re.compile(r'\b(graph|connections|social|ig graph)\b', re.IGNORECASE),
 }
 
 
