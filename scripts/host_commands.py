@@ -114,11 +114,11 @@ def format_search_results(event_id: int, query: str) -> str:
         if guest['invited_by_phone']:
             inviter = db.get_guest_by_phone(guest['invited_by_phone'], guest['event_id'])
             inviter_name = inviter['name'] if inviter and inviter['name'] else mask_phone(guest['invited_by_phone'])
-            quota_status = "used" if guest['quota_used'] == 1 else "unused"
-            lines.append(f"{status} {name} (invited by {inviter_name}) · +1 {quota_status}")
+            quota_status = f"{guest['quota_used']}/2"
+            lines.append(f"{status} {name} (invited by {inviter_name}) · invites {quota_status}")
         else:
-            quota_status = "used" if guest['quota_used'] == 1 else "unused"
-            lines.append(f"{status} {name} (initial invite) · +1 {quota_status}")
+            quota_status = f"{guest['quota_used']}/2"
+            lines.append(f"{status} {name} (initial invite) · invites {quota_status}")
 
     return '\n'.join(lines)
 

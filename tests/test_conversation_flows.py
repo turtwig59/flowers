@@ -128,6 +128,7 @@ class TestFullInviteFlow:
         plus_one_phone = "+12025552222"
         response = route_message(guest_phone, f"Here's their number: {plus_one_phone}", event_id)
         assert "sent" in response.lower() or "invited" in response.lower()
+        assert "one more invite" in response.lower()  # Still has 1 invite left
 
         # Verify +1 guest created
         plus_one = db.get_guest_by_phone(plus_one_phone, event_id)
@@ -135,7 +136,7 @@ class TestFullInviteFlow:
         assert plus_one['invited_by_phone'] == guest_phone
         assert plus_one['status'] == 'pending'
 
-        # Verify quota used
+        # Verify quota used (1 of 2)
         guest = db.get_guest_by_phone(guest_phone, event_id)
         assert guest['quota_used'] == 1
 
@@ -252,8 +253,8 @@ class TestFAQHandling:
 class TestQuotaEnforcement:
     """Test quota enforcement."""
 
-    def test_cannot_invite_twice(self, test_setup):
-        """Test that guest cannot invite more than one person."""
+    def test_cannot_invite_three_times(self, test_setup):
+        """Test that guest cannot invite more than two people."""
         db = test_setup['db']
         event_id = test_setup['event_id']
         guest_phone = "+12025558888"
@@ -262,23 +263,32 @@ class TestQuotaEnforcement:
         send_invite(event_id, guest_phone)
         route_message(guest_phone, "YES", event_id)
         route_message(guest_phone, "Eve", event_id)
+        route_message(guest_phone, "skip", event_id)  # Skip Instagram
 
-        # Invite first +1
+        # Invite first person
         route_message(guest_phone, "YES", event_id)
         route_message(guest_phone, "+12025559999", event_id)
 
-        # Verify quota used
+        # Verify first quota used
         guest = db.get_guest_by_phone(guest_phone, event_id)
         assert guest['quota_used'] == 1
 
-        # Try to invite second +1
+        # Invite second person (should be offered again since quota not full)
         response = route_message(guest_phone, "+12025559998", event_id)
-        assert "already" in response.lower() or "used" in response.lower()
+        assert "sent" in response.lower() or "invited" in response.lower()
 
-        # Verify only one +1 created
+        # Verify second quota used
+        guest = db.get_guest_by_phone(guest_phone, event_id)
+        assert guest['quota_used'] == 2
+
+        # Try to invite third person — should be blocked
+        response = route_message(guest_phone, "+12025559997", event_id)
+        assert "used" in response.lower() or "both" in response.lower()
+
+        # Verify only two +1s created
         all_guests = db.get_guests(event_id)
         invited_by_guest = [g for g in all_guests if g['invited_by_phone'] == guest_phone]
-        assert len(invited_by_guest) == 1
+        assert len(invited_by_guest) == 2
 
 
 class TestHostCommands:

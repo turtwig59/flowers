@@ -228,8 +228,8 @@ class Database:
         if guest['status'] != 'confirmed':
             return False, "Only confirmed guests can invite"
 
-        if guest['quota_used'] >= 1:
-            return False, "You've already invited someone"
+        if guest['quota_used'] >= 2:
+            return False, "You've already used both invites"
 
         return True, "OK"
 
@@ -263,7 +263,7 @@ class Database:
             if guest['status'] != 'confirmed':
                 raise ValueError("Only confirmed guests can invite")
 
-            if guest['quota_used'] >= 1:
+            if guest['quota_used'] >= 2:
                 raise ValueError("Quota already used")
 
             # Create new guest
@@ -278,7 +278,7 @@ class Database:
 
             # Update quota
             conn.execute(
-                "UPDATE guests SET quota_used = 1 WHERE id = ?",
+                "UPDATE guests SET quota_used = quota_used + 1 WHERE id = ?",
                 (guest_id,)
             )
 
@@ -586,7 +586,7 @@ class Database:
             cursor = conn.execute(
                 """
                 SELECT COUNT(*) as count FROM guests
-                WHERE event_id = ? AND quota_used = 1
+                WHERE event_id = ? AND quota_used > 0
                 """,
                 (event_id,)
             )

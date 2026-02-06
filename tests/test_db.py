@@ -224,7 +224,7 @@ class TestQuota:
         assert can_invite is True
 
     def test_use_quota(self, test_db):
-        """Test using quota to invite +1."""
+        """Test using quota to invite up to 2 people."""
         event_id = test_db.create_event(
             name="Test Party",
             event_date="2026-03-15",
@@ -237,11 +237,11 @@ class TestQuota:
         guest_id = test_db.create_guest(event_id, "+15559999999")
         test_db.update_guest(guest_id, status='confirmed')
 
-        # Use quota
+        # Use first invite
         new_guest_id = test_db.use_quota(guest_id, "+15558888888")
         assert new_guest_id > 0
 
-        # Verify quota was used
+        # Verify quota incremented to 1
         guest = test_db.get_guest(guest_id)
         assert guest['quota_used'] == 1
 
@@ -251,12 +251,24 @@ class TestQuota:
         assert new_guest['phone'] == "+15558888888"
         assert new_guest['invited_by_phone'] == "+15559999999"
 
-        # Cannot use quota again
+        # Can still invite (1 of 2 used)
+        can_invite, _ = test_db.can_invite_plus_one(guest_id)
+        assert can_invite is True
+
+        # Use second invite
+        new_guest_id_2 = test_db.use_quota(guest_id, "+15557777777")
+        assert new_guest_id_2 > 0
+
+        # Verify quota incremented to 2
+        guest = test_db.get_guest(guest_id)
+        assert guest['quota_used'] == 2
+
+        # Cannot use quota again (2 of 2 used)
         can_invite, _ = test_db.can_invite_plus_one(guest_id)
         assert can_invite is False
 
         with pytest.raises(ValueError, match="Quota already used"):
-            test_db.use_quota(guest_id, "+15557777777")
+            test_db.use_quota(guest_id, "+15556666666")
 
 
 class TestConversationState:

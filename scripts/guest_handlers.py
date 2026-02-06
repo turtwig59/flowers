@@ -16,8 +16,8 @@ RESPONSES = {
     'accepted_ask_name': "Great! What's your name?",
     'accepted_ask_name_alt': "Perfect! What should I call you?",
 
-    'name_received_offer_plus_one': "You get one invite to share. Want to invite someone?",
-    'name_received_offer_plus_one_alt': "You can bring one person. Want to invite them?",
+    'name_received_offer_plus_one': "You get two invites to share. Want to invite someone?",
+    'name_received_offer_plus_one_alt': "You can bring up to two people. Want to invite someone?",
 
     'plus_one_accepted': "Send me a contact card or their phone number.",
 
@@ -27,7 +27,7 @@ RESPONSES = {
 
     'declined': "Thanks for letting me know!",
 
-    'quota_exceeded': "You've already invited someone! Each guest gets one invite to share.",
+    'quota_exceeded': "You've used both invites! Each guest gets two invites to share.",
 
     'invalid_name': "Got it — what name should I use for the list? (first name is fine)",
 
@@ -384,14 +384,6 @@ def handle_contact_submission(guest: Dict[str, Any], text: str, event_id: int, v
         from invite_sender import send_invite
         send_invite(event_id, normalized_phone, invited_by_phone=guest['phone'])
 
-        # Update state to idle
-        db.upsert_conversation_state(
-            event_id,
-            guest['phone'],
-            'idle',
-            {'invited_plus_one': normalized_phone}
-        )
-
         # Log +1 usage
         try:
             event = db.get_event(event_id)
@@ -399,7 +391,24 @@ def handle_contact_submission(guest: Dict[str, Any], text: str, event_id: int, v
         except:
             pass
 
-        return RESPONSES['invite_sent']
+        # Check if guest has invites remaining
+        updated_guest = db.get_guest(guest['id'])
+        if updated_guest['quota_used'] < 2:
+            db.upsert_conversation_state(
+                event_id,
+                guest['phone'],
+                'idle',
+                {'invited_plus_one': normalized_phone}
+            )
+            return RESPONSES['invite_sent'] + "\n\nYou have one more invite. Want to invite someone else?"
+        else:
+            db.upsert_conversation_state(
+                event_id,
+                guest['phone'],
+                'idle',
+                {'invited_plus_one': normalized_phone}
+            )
+            return RESPONSES['invite_sent']
 
     except ValueError as e:
         # Quota error or other issue
@@ -429,11 +438,13 @@ def handle_faq(guest: Dict[str, Any], faq_type: str, event_id: int) -> str:
     elif faq_type == 'plus_one':
         if guest['status'] == 'confirmed':
             if guest['quota_used'] == 0:
-                return "You get one invite to share! Want to invite someone now?"
+                return "You get two invites to share! Want to invite someone now?"
+            elif guest['quota_used'] == 1:
+                return "You have one invite left! Want to use it?"
             else:
-                return "You already used your one invite."
+                return "You've used both your invites."
         else:
-            return "You get one invite to share after you confirm."
+            return "You get two invites to share after you confirm."
 
     elif faq_type == 'drop':
         return f"Location drops at {event['location_drop_time']} on {event['event_date']}."

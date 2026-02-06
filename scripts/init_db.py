@@ -68,13 +68,13 @@ CREATE INDEX IF NOT EXISTS idx_guests_invited_by ON guests(invited_by_phone);
 CREATE INDEX IF NOT EXISTS idx_conversation_state_lookup ON conversation_state(event_id, phone);
 CREATE INDEX IF NOT EXISTS idx_message_log_timestamp ON message_log(timestamp DESC);
 
--- Trigger: Enforce quota (exactly 1 invite per guest)
+-- Trigger: Enforce quota (max 2 invites per guest)
 CREATE TRIGGER IF NOT EXISTS enforce_quota
 BEFORE UPDATE ON guests
 FOR EACH ROW
-WHEN NEW.quota_used > 1
+WHEN NEW.quota_used > 2
 BEGIN
-    SELECT RAISE(ABORT, 'Quota exceeded: each guest can only invite one person');
+    SELECT RAISE(ABORT, 'Quota exceeded: each guest can only invite two people');
 END;
 
 -- Instagram: Who each guest follows (scraped from Instagram)
