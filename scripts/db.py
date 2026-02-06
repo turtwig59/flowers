@@ -538,6 +538,25 @@ class Database:
         finally:
             conn.close()
 
+    def get_pending_rescans(self, min_age_seconds: int = 1800) -> List[Dict[str, Any]]:
+        """Find ig_follow_status rows needing rescan (requested, not yet scraped, old enough)."""
+        cutoff = int(time.time()) - min_age_seconds
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT ifs.event_id, ifs.guest_id, ifs.handle
+                FROM ig_follow_status ifs
+                WHERE ifs.status = 'requested'
+                  AND ifs.scraped_at IS NULL
+                  AND ifs.followed_at < ?
+                """,
+                (cutoff,)
+            )
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
     # ==================== Stats ====================
 
     def get_event_stats(self, event_id: int) -> Dict[str, int]:

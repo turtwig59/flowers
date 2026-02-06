@@ -8,6 +8,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 
 import pytest
+import time
 import tempfile
 import shutil
 import sqlite3
@@ -346,6 +347,120 @@ class TestIGStats:
         assert stats['scraped'] == 1
         assert stats['pending'] == 1
         assert stats['connections'] == 1  # alice follows bob
+
+
+class TestRescanRetryMechanism:
+    """Test retry mechanism for private Instagram accounts."""
+
+    def test_pending_rescans_queried_correctly(self, test_setup):
+        """get_pending_rescans returns only eligible rows (requested, unscraped, old enough)."""
+        db = test_setup['db']
+        event_id = test_setup['event_id']
+        now = int(time.time())
+
+        # Guest 1: requested, no scrape, followed 1 hour ago — ELIGIBLE
+        g1 = _create_guest(db, event_id, "+12025551111", instagram="@alice")
+        db.upsert_ig_follow_status(event_id, g1, "alice", "requested",
+                                   followed_at=now - 3600)
+
+        # Guest 2: requested, no scrape, followed 5 min ago — TOO RECENT
+        g2 = _create_guest(db, event_id, "+12025552222", instagram="@bob")
+        db.upsert_ig_follow_status(event_id, g2, "bob", "requested",
+                                   followed_at=now - 300)
+
+        # Guest 3: followed (not requested) — NOT ELIGIBLE
+        g3 = _create_guest(db, event_id, "+12025553333", instagram="@charlie")
+        db.upsert_ig_follow_status(event_id, g3, "charlie", "followed",
+                                   followed_at=now - 3600)
+
+        # Guest 4: requested but already scraped — NOT ELIGIBLE
+        g4 = _create_guest(db, event_id, "+12025554444", instagram="@dave")
+        db.upsert_ig_follow_status(event_id, g4, "dave", "requested",
+                                   followed_at=now - 3600, scraped_at=now - 1800)
+
+        rescans = db.get_pending_rescans(min_age_seconds=1800)
+        handles = [r['handle'] for r in rescans]
+        assert 'alice' in handles
+        assert 'bob' not in handles
+        assert 'charlie' not in handles
+        assert 'dave' not in handles
+
+    def test_rescan_succeeds_after_accept(self, test_setup):
+        """Simulate: initial scrape fails (private), rescan succeeds, mutual connections notified."""
+        db = test_setup['db']
+        event_id = test_setup['event_id']
+        mock_browser = test_setup['mock_browser']
+        now = int(time.time())
+
+        # Existing guest Alice follows bob_smith
+        alice_id = _create_guest(db, event_id, "+12025551111", name="Alice", instagram="@alice_nyc")
+        db.store_ig_following(event_id, alice_id, "alice_nyc", ["bob_smith"])
+        db.upsert_ig_follow_status(event_id, alice_id, "alice_nyc", "followed",
+                                   followed_at=now - 7200, scraped_at=now - 7200)
+
+        # Bob: initially requested (private), no scrape
+        bob_id = _create_guest(db, event_id, "+12025552222", name="Bob", instagram="@bob_smith")
+        db.upsert_ig_follow_status(event_id, bob_id, "bob_smith", "requested",
+                                   followed_at=now - 3600)
+
+        # Now mock that Bob accepted — scrape returns data
+        mock_browser.set_following("bob_smith", ["alice_nyc", "random_person"])
+
+        from instagram_social import _process_rescan_job
+        with patch('instagram_social._get_browser', return_value=mock_browser):
+            _process_rescan_job({
+                'type': 'rescan',
+                'event_id': event_id,
+                'guest_id': bob_id,
+                'handle': 'bob_smith',
+            })
+
+        # Verify scrape was stored
+        status = db.get_ig_follow_status(event_id, bob_id)
+        assert status['scraped_at'] is not None
+        assert status['following_count'] == 2
+
+        # Verify Alice was notified about Bob (Alice follows bob_smith)
+        assert db.has_notification_been_sent(event_id, alice_id, bob_id)
+
+    def test_rescan_skips_recently_followed(self, test_setup):
+        """Verify 30-minute minimum is respected by get_pending_rescans."""
+        db = test_setup['db']
+        event_id = test_setup['event_id']
+        now = int(time.time())
+
+        guest_id = _create_guest(db, event_id, "+12025551111", instagram="@recent")
+        db.upsert_ig_follow_status(event_id, guest_id, "recent", "requested",
+                                   followed_at=now - 60)  # Only 1 minute ago
+
+        rescans = db.get_pending_rescans(min_age_seconds=1800)
+        assert len(rescans) == 0
+
+    def test_worker_stays_alive(self, test_setup):
+        """Verify worker continues instead of exiting on idle."""
+        import queue as queue_mod
+        from instagram_social import _worker_loop, _job_queue, _queue_pending_rescans
+
+        # Patch _job_queue.get to raise Empty twice, then raise an exception to stop the loop
+        call_count = [0]
+        original_get = _job_queue.get
+
+        def mock_get(timeout=None):
+            call_count[0] += 1
+            if call_count[0] <= 2:
+                raise queue_mod.Empty()
+            # Third call: put a poison pill to break the loop
+            raise Exception("stop_test")
+
+        with patch.object(_job_queue, 'get', side_effect=mock_get), \
+             patch('instagram_social._queue_pending_rescans') as mock_rescan:
+            try:
+                _worker_loop()
+            except Exception as e:
+                assert str(e) == "stop_test"
+
+            # _queue_pending_rescans should have been called twice (once per Empty)
+            assert mock_rescan.call_count == 2
 
 
 class TestMockBrowser:
