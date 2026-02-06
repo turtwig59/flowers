@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Yed</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
+  @import url('https://use.typekit.net/afn2qlg.css');
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   html, body {
     height: 100%;
     overflow: hidden;
-    background: #050a05;
-    cursor: crosshair;
+    background: #0a0a0a;
+    cursor: default;
   }
 
   body {
@@ -21,19 +21,17 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'bookmania', Georgia, 'Times New Roman', serif;
     -webkit-font-smoothing: antialiased;
     position: relative;
   }
 
   .headline {
-    color: #e8e0d4;
-    font-size: clamp(28px, 6vw, 72px);
+    color: #e0e0e0;
+    font-size: clamp(32px, 7vw, 80px);
     font-weight: 400;
-    font-style: italic;
     line-height: 1.2;
-    letter-spacing: 0.02em;
-    animation: breathe 4s ease-in-out infinite;
+    letter-spacing: 0.04em;
     user-select: none;
     position: relative;
     z-index: 2;
@@ -42,10 +40,10 @@
   }
 
   .contact {
-    color: #3a5a3a;
-    font-size: clamp(12px, 1.6vw, 18px);
+    color: #e0e0e0;
+    font-size: clamp(13px, 1.6vw, 18px);
     font-weight: 400;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     margin-top: 3vh;
     text-align: center;
     padding: 0 20px;
@@ -53,233 +51,50 @@
     z-index: 2;
   }
 
-  .contact a {
-    color: #4a6a4a;
-    text-decoration: none;
-    border-bottom: 1px solid #2a4a2a;
-    transition: color 0.3s;
-  }
 
-  .contact a:hover {
-    color: #6a8a6a;
-  }
-
-  @keyframes breathe {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.02); opacity: 0.85; }
-  }
-
-  /* --- flowers growing from the bottom --- */
-  .stem {
-    position: absolute;
-    bottom: 0;
-    width: 2px;
-    background: #1a3a1a;
-    transform-origin: bottom center;
+  /* --- child-drawn flower --- */
+  .doodle-flower {
+    position: relative;
     z-index: 1;
+    margin-bottom: 4vh;
+    animation: tick 2.4s steps(1) infinite;
   }
 
-  .bloom {
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    animation: bloom 3s ease-out forwards;
-  }
-
-  .bloom::before, .bloom::after {
-    content: '';
-    position: absolute;
-    border-radius: 50%;
-    animation: bloom 3s ease-out forwards;
-  }
-
-  /* petal shape */
-  .petal {
-    position: absolute;
-    width: 8px;
-    height: 12px;
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    transform-origin: center bottom;
-    opacity: 0;
-    animation: petalOpen 2.5s ease-out forwards;
-  }
-
-  /* flower 1 — left side, pale pink */
-  .flower-1 { left: 8%; }
-  .flower-1 .stem { height: 0; animation: grow 2s ease-out 0.5s forwards; }
-  .flower-1 .petal { background: #6b3a4a; }
-  .flower-1 .p1 { transform: rotate(0deg) translateY(-6px); animation-delay: 2s; }
-  .flower-1 .p2 { transform: rotate(60deg) translateY(-6px); animation-delay: 2.1s; }
-  .flower-1 .p3 { transform: rotate(120deg) translateY(-6px); animation-delay: 2.2s; }
-  .flower-1 .p4 { transform: rotate(180deg) translateY(-6px); animation-delay: 2.3s; }
-  .flower-1 .p5 { transform: rotate(240deg) translateY(-6px); animation-delay: 2.4s; }
-  .flower-1 .p6 { transform: rotate(300deg) translateY(-6px); animation-delay: 2.5s; }
-  .flower-1 .center { background: #4a2a2a; width: 5px; height: 5px; border-radius: 50%;
-    position: absolute; top: -3px; left: -3px; opacity: 0; animation: fadeIn 0.5s 2.6s forwards; }
-
-  /* flower 2 — right side, muted lavender */
-  .flower-2 { right: 12%; left: auto; }
-  .flower-2 .stem { height: 0; animation: grow 2.2s ease-out 1s forwards; }
-  .flower-2 .petal { background: #4a3a5a; }
-  .flower-2 .p1 { transform: rotate(0deg) translateY(-6px); animation-delay: 2.8s; }
-  .flower-2 .p2 { transform: rotate(72deg) translateY(-6px); animation-delay: 2.9s; }
-  .flower-2 .p3 { transform: rotate(144deg) translateY(-6px); animation-delay: 3s; }
-  .flower-2 .p4 { transform: rotate(216deg) translateY(-6px); animation-delay: 3.1s; }
-  .flower-2 .p5 { transform: rotate(288deg) translateY(-6px); animation-delay: 3.2s; }
-  .flower-2 .center { background: #3a2a4a; width: 4px; height: 4px; border-radius: 50%;
-    position: absolute; top: -2px; left: -2px; opacity: 0; animation: fadeIn 0.5s 3.3s forwards; }
-
-  /* flower 3 — far left, dark rose */
-  .flower-3 { left: 22%; }
-  .flower-3 .stem { height: 0; animation: grow 1.8s ease-out 1.5s forwards; }
-  .flower-3 .petal { background: #5a2a3a; width: 6px; height: 10px; }
-  .flower-3 .p1 { transform: rotate(0deg) translateY(-5px); animation-delay: 3s; }
-  .flower-3 .p2 { transform: rotate(90deg) translateY(-5px); animation-delay: 3.1s; }
-  .flower-3 .p3 { transform: rotate(180deg) translateY(-5px); animation-delay: 3.2s; }
-  .flower-3 .p4 { transform: rotate(270deg) translateY(-5px); animation-delay: 3.3s; }
-  .flower-3 .center { background: #3a1a2a; width: 4px; height: 4px; border-radius: 50%;
-    position: absolute; top: -2px; left: -2px; opacity: 0; animation: fadeIn 0.5s 3.4s forwards; }
-
-  /* flower 4 — right-center, deep green-gold */
-  .flower-4 { right: 30%; left: auto; }
-  .flower-4 .stem { height: 0; animation: grow 2s ease-out 2s forwards; }
-  .flower-4 .petal { background: #3a4a2a; }
-  .flower-4 .p1 { transform: rotate(0deg) translateY(-6px); animation-delay: 3.6s; }
-  .flower-4 .p2 { transform: rotate(51deg) translateY(-6px); animation-delay: 3.7s; }
-  .flower-4 .p3 { transform: rotate(103deg) translateY(-6px); animation-delay: 3.8s; }
-  .flower-4 .p4 { transform: rotate(154deg) translateY(-6px); animation-delay: 3.9s; }
-  .flower-4 .p5 { transform: rotate(206deg) translateY(-6px); animation-delay: 4s; }
-  .flower-4 .p6 { transform: rotate(257deg) translateY(-6px); animation-delay: 4.1s; }
-  .flower-4 .p7 { transform: rotate(309deg) translateY(-6px); animation-delay: 4.2s; }
-  .flower-4 .center { background: #2a3a1a; width: 5px; height: 5px; border-radius: 50%;
-    position: absolute; top: -3px; left: -3px; opacity: 0; animation: fadeIn 0.5s 4.3s forwards; }
-
-  /* flower 5 — far right, small */
-  .flower-5 { right: 5%; left: auto; }
-  .flower-5 .stem { height: 0; animation: grow 1.5s ease-out 2.5s forwards; }
-  .flower-5 .petal { background: #5a4a3a; width: 5px; height: 8px; }
-  .flower-5 .p1 { transform: rotate(0deg) translateY(-4px); animation-delay: 3.8s; }
-  .flower-5 .p2 { transform: rotate(120deg) translateY(-4px); animation-delay: 3.9s; }
-  .flower-5 .p3 { transform: rotate(240deg) translateY(-4px); animation-delay: 4s; }
-  .flower-5 .center { background: #4a3a2a; width: 3px; height: 3px; border-radius: 50%;
-    position: absolute; top: -2px; left: -2px; opacity: 0; animation: fadeIn 0.5s 4.1s forwards; }
-
-  /* all flowers sway after blooming */
-  .flower { position: absolute; bottom: 0; animation: sway 6s ease-in-out infinite; }
-  .flower-1 { animation-delay: 0s; }
-  .flower-2 { animation-delay: 1.5s; }
-  .flower-3 { animation-delay: 0.8s; }
-  .flower-4 { animation-delay: 2.2s; }
-  .flower-5 { animation-delay: 3s; }
-
-  @keyframes grow {
-    to { height: calc(20vh + 40px); }
-  }
-
-  .flower-1 .stem { animation: grow1 2s ease-out 0.5s forwards; }
-  .flower-2 .stem { animation: grow2 2.2s ease-out 1s forwards; }
-  .flower-3 .stem { animation: grow3 1.8s ease-out 1.5s forwards; }
-  .flower-4 .stem { animation: grow4 2s ease-out 2s forwards; }
-  .flower-5 .stem { animation: grow5 1.5s ease-out 2.5s forwards; }
-
-  @keyframes grow1 { to { height: 28vh; } }
-  @keyframes grow2 { to { height: 32vh; } }
-  @keyframes grow3 { to { height: 18vh; } }
-  @keyframes grow4 { to { height: 22vh; } }
-  @keyframes grow5 { to { height: 14vh; } }
-
-  @keyframes petalOpen {
-    0% { opacity: 0; transform: inherit scale(0); }
-    100% { opacity: 0.8; transform: inherit scale(1); }
-  }
-
-  @keyframes fadeIn {
-    to { opacity: 0.9; }
-  }
-
-  @keyframes sway {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(1.5deg); }
-    75% { transform: rotate(-1.5deg); }
-  }
-
-  /* --- falling petals --- */
-  .falling-petal {
-    position: absolute;
-    width: 6px;
-    height: 8px;
-    border-radius: 50% 0 50% 0;
-    opacity: 0;
-    z-index: 0;
-    animation: fall linear infinite;
-  }
-
-  .fp1 { left: 15%; background: #5a2a3a; animation-duration: 12s; animation-delay: 4s; top: -10px; }
-  .fp2 { left: 45%; background: #4a3a5a; animation-duration: 15s; animation-delay: 6s; top: -10px; }
-  .fp3 { left: 70%; background: #3a4a2a; animation-duration: 11s; animation-delay: 8s; top: -10px; }
-  .fp4 { left: 30%; background: #6b3a4a; animation-duration: 14s; animation-delay: 10s; top: -10px; }
-  .fp5 { left: 85%; background: #5a4a3a; animation-duration: 13s; animation-delay: 5s; top: -10px; }
-  .fp6 { left: 55%; background: #5a2a3a; animation-duration: 16s; animation-delay: 12s; top: -10px; }
-
-  @keyframes fall {
-    0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0; }
-    5% { opacity: 0.5; }
-    50% { transform: translateY(50vh) rotate(180deg) translateX(30px); opacity: 0.4; }
-    95% { opacity: 0.2; }
-    100% { transform: translateY(105vh) rotate(360deg) translateX(-20px); opacity: 0; }
+  @keyframes tick {
+    0%    { transform: rotate(0deg); }
+    12.5% { transform: rotate(45deg); }
+    25%   { transform: rotate(90deg); }
+    37.5% { transform: rotate(135deg); }
+    50%   { transform: rotate(180deg); }
+    62.5% { transform: rotate(225deg); }
+    75%   { transform: rotate(270deg); }
+    87.5% { transform: rotate(315deg); }
+    100%  { transform: rotate(360deg); }
   }
 </style>
 </head>
 <body>
-  <div class="headline">Invite only</div>
-  <div class="contact"><a href="mailto:doorman@yed.flowers">doorman@yed.flowers</a></div>
+  <!-- child-drawn flower -->
+  <svg class="doodle-flower" width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- petals (wobbly circles, like a kid drew them) -->
+    <ellipse cx="38" cy="60" rx="16" ry="14" stroke="#ccc" stroke-width="2" fill="none"
+             transform="rotate(-15 38 60)"/>
+    <ellipse cx="82" cy="60" rx="15" ry="13" stroke="#ccc" stroke-width="2" fill="none"
+             transform="rotate(10 82 60)"/>
+    <ellipse cx="42" cy="40" rx="14" ry="15" stroke="#ccc" stroke-width="2" fill="none"
+             transform="rotate(-5 42 40)"/>
+    <ellipse cx="78" cy="38" rx="13" ry="14" stroke="#ccc" stroke-width="2" fill="none"
+             transform="rotate(8 78 38)"/>
+    <ellipse cx="60" cy="30" rx="15" ry="13" stroke="#ccc" stroke-width="2" fill="none"
+             transform="rotate(3 60 30)"/>
+    <ellipse cx="60" cy="82" rx="14" ry="13" stroke="#ccc" stroke-width="2" fill="none"
+             transform="rotate(-7 60 82)"/>
+    <!-- center (scribbled circle) -->
+    <circle cx="60" cy="56" r="12" stroke="#aaa" stroke-width="2.5" fill="none"/>
+    <circle cx="61" cy="55" r="8" stroke="#777" stroke-width="1.5" fill="none"/>
+  </svg>
 
-  <!-- flowers growing from bottom -->
-  <div class="flower flower-1">
-    <div class="stem">
-      <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
-      <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
-      <div class="center"></div>
-    </div>
-  </div>
-  <div class="flower flower-2">
-    <div class="stem">
-      <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
-      <div class="petal p4"></div><div class="petal p5"></div>
-      <div class="center"></div>
-    </div>
-  </div>
-  <div class="flower flower-3">
-    <div class="stem">
-      <div class="petal p1"></div><div class="petal p2"></div>
-      <div class="petal p3"></div><div class="petal p4"></div>
-      <div class="center"></div>
-    </div>
-  </div>
-  <div class="flower flower-4">
-    <div class="stem">
-      <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
-      <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div><div class="petal p7"></div>
-      <div class="center"></div>
-    </div>
-  </div>
-  <div class="flower flower-5">
-    <div class="stem">
-      <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
-      <div class="center"></div>
-    </div>
-  </div>
-
-  <!-- falling petals -->
-  <div class="falling-petal fp1"></div>
-  <div class="falling-petal fp2"></div>
-  <div class="falling-petal fp3"></div>
-  <div class="falling-petal fp4"></div>
-  <div class="falling-petal fp5"></div>
-  <div class="falling-petal fp6"></div>
+  <div class="headline">Check your texts.</div>
+  <div class="contact">doorman@yed.flowers</div>
 </body>
 </html>
