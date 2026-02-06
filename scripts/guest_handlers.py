@@ -16,8 +16,8 @@ RESPONSES = {
     'accepted_ask_name': "Great! What's your name?",
     'accepted_ask_name_alt': "Perfect! What should I call you?",
 
-    'name_received_offer_plus_one': "You get two invites to share. Want to invite someone?",
-    'name_received_offer_plus_one_alt': "You can bring up to two people. Want to invite someone?",
+    'name_received_offer_plus_one': "You get two invites to share — they expire in an hour. Want to invite someone?",
+    'name_received_offer_plus_one_alt': "You can bring up to two people — invites expire in an hour. Want to invite someone?",
 
     'plus_one_accepted': "Send me a contact card or their phone number.",
 
