@@ -107,11 +107,24 @@ def main():
             chat_ids = [c["id"] for c in chats]
 
             all_new = []
+            highest_seen = last_id
             for cid in chat_ids:
                 messages = get_recent_messages(cid, limit=5)
                 for m in messages:
-                    if m.get("id", 0) > last_id and not m.get("is_from_me", True):
-                        all_new.append(m)
+                    msg_id = m.get("id", 0)
+                    # Track the highest ID we've seen (incoming or outgoing)
+                    # so we don't re-query old messages, but only collect
+                    # incoming messages for processing.
+                    if msg_id > last_id:
+                        if msg_id > highest_seen:
+                            highest_seen = msg_id
+                        if not m.get("is_from_me", True):
+                            all_new.append(m)
+
+            # Advance last_id to everything we observed in this collection.
+            # This happens BEFORE processing so that messages arriving while
+            # we process will have IDs > highest_seen and be caught next cycle.
+            last_id = highest_seen
 
             # Sort by ID (chronological order)
             all_new.sort(key=lambda m: m.get("id", 0))
@@ -119,7 +132,6 @@ def main():
             for msg in all_new:
                 sender = msg.get("sender", "")
                 text = msg.get("text", "")
-                msg_id = msg.get("id", 0)
                 vcard = get_vcard_path(msg)
 
                 if sender and (text or vcard):
@@ -128,17 +140,6 @@ def main():
                     print(f"📱 Message from {sender}: {text}", flush=True)
                     process_message(sender, text, vcard_path=vcard)
                     print("", flush=True)
-
-                if msg_id > last_id:
-                    last_id = msg_id
-
-            # Also track outgoing message IDs so we don't re-process
-            for cid in chat_ids:
-                messages = get_recent_messages(cid, limit=1)
-                if messages:
-                    mid = messages[0].get("id", 0)
-                    if mid > last_id:
-                        last_id = mid
 
             # Check for invite and +1 expirations
             run_expiration_checks()
