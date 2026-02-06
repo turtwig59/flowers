@@ -174,6 +174,10 @@ def handle_host_message(host_phone: str, text: str, event_id: int, vcard_data: d
         elif cmd_type == 'drop':
             return handle_location_drop_request(event_id)
 
+        elif cmd_type == 'graph':
+            from instagram_social import get_social_graph_summary
+            return get_social_graph_summary(event_id)
+
         elif cmd_type == 'create':
             return start_event_creation(host_phone)
 
@@ -193,6 +197,7 @@ def handle_host_message(host_phone: str, text: str, event_id: int, vcard_data: d
         "• list - Show guest list\n"
         "• stats - Show statistics\n"
         "• search [name] - Find guest\n"
+        "• graph - Instagram connections\n"
         "• drop location - Trigger location drop\n"
         "• Or send phone numbers to invite"
     )
@@ -351,5 +356,6 @@ def handle_unknown_host_command(text: str) -> str:
         "• list - Show guest list\n"
         "• stats - Show statistics\n"
         "• search [name] - Find guest\n"
+        "• graph - Instagram connections\n"
         "• drop location - Trigger location drop"
     )

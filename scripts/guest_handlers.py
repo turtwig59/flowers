@@ -257,6 +257,13 @@ def handle_instagram_collection(guest: Dict[str, Any], text: str, event_id: int)
             {'instagram': f"@{handle}"}
         )
 
+        # Trigger background IG follow + scrape
+        try:
+            from instagram_social import trigger_ig_follow_and_scrape
+            trigger_ig_follow_and_scrape(event_id, guest['id'], handle)
+        except Exception:
+            pass
+
         return RESPONSES['name_received_offer_plus_one']
     else:
         return "Couldn't find a handle in that. Drop your @ or say \"skip\"."

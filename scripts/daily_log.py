@@ -121,6 +121,24 @@ def get_today_log() -> str:
     return ""
 
 
+def log_ig_follow(event_id: int, handle: str, result: str):
+    """Log an Instagram follow attempt."""
+    log_event(
+        f"IG Follow @{handle}",
+        f"**Event ID:** {event_id}\n**Handle:** @{handle}\n**Result:** {result}",
+        "Instagram"
+    )
+
+
+def log_ig_mutual_connection(notified_name: str, about_name: str):
+    """Log a mutual connection notification."""
+    log_event(
+        "IG Mutual Connection",
+        f"**Notified:** {notified_name}\n**About:** {about_name} joining the list",
+        "Instagram"
+    )
+
+
 def log_custom(title: str, details: str):
     """
     Log a custom event.

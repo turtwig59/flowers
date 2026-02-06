@@ -32,7 +32,7 @@ kill $(cat /tmp/flowers-bot.pid)
 tail -f ~/flowers-bot.log
 ```
 
-**Dependencies:** `pip3 install pytest phonenumbers python-dateutil anthropic python-dotenv`
+**Dependencies:** `pip3 install pytest phonenumbers python-dateutil anthropic python-dotenv playwright && python3 -m playwright install chromium`
 
 ## CRITICAL: Never Send Real Messages Without Permission
 
@@ -100,6 +100,20 @@ When a confirmed guest asks a question the LLM can't answer:
 4. Host's conversation state set to `answering_guest_question`
 5. When host replies, answer is rewritten in doorman voice via `rewrite_host_answer()` and sent to guest
 
+### Instagram Social Graph
+
+When a guest provides their IG handle, `guest_handlers.py` triggers a background job via `instagram_social.py`:
+1. `@yed.flowers` follows the guest via Playwright browser (`instagram_browser.py`)
+2. Waits 5-10s, then scrapes the guest's following list
+3. Stores following list in `ig_following` table
+4. Checks if any existing event guests appear in the new guest's following list
+5. Sends notification to existing guests who follow the new person: "Heads up — {name} just got on the list."
+6. Deduplicates via `ig_notifications_sent` table
+
+All IG operations are no-ops when `FLOWERS_TESTING=1`. The browser session is persisted to `data/ig_session.json`. Initial login: `python3 scripts/instagram_browser.py login`.
+
+Host can text "graph" to see intra-event Instagram connections.
+
 ### vCard / Contact Card Support
 
 iMessage contact cards arrive as attachments with `mime_type: "text/vcard"` and a `.vcf` file path. The pipeline:
@@ -115,7 +129,9 @@ iMessage contact cards arrive as attachments with `mime_type: "text/vcard"` and 
 - **`db.py`** — SQLite wrapper; singleton `db` instance used everywhere via `from db import db`
 - **`message_router.py`** — Central dispatch; regex-based intent detection + LLM fallback + question escalation
 - **`guest_handlers.py`** — State machine handlers for guest conversation flow (including Instagram collection)
-- **`host_commands.py`** — Host commands: list, stats, search, drop location, send invites, answer escalated questions
+- **`host_commands.py`** — Host commands: list, stats, search, graph, drop location, send invites, answer escalated questions
+- **`instagram_browser.py`** — Playwright-based Chromium controller for IG follow/scrape (session at `data/ig_session.json`)
+- **`instagram_social.py`** — Social graph logic: background worker, mutual connection detection, host "graph" command
 - **`event_creation.py`** — Multi-step conversational event creation with flexible date parsing
 - **`location_drop.py`** — Two-part location reveal with `threading.Timer` for the 5-minute delay
 - **`invite_sender.py`** — Sends invite messages with doorman intro and creates guest/state records
@@ -129,11 +145,14 @@ iMessage contact cards arrive as attachments with `mime_type: "text/vcard"` and 
 
 ### Database
 
-SQLite at `data/flowers.db`. Schema in `scripts/init_db.py`. Four tables:
+SQLite at `data/flowers.db`. Schema in `scripts/init_db.py`. Seven tables:
 - **events** — event details, host_phone, status, rules (JSON)
 - **guests** — phone (E.164), name, instagram, status, invited_by_phone (invite tree), quota_used (0 or 1)
 - **conversation_state** — current state + context (JSON), keyed by (event_id, phone)
 - **message_log** — full audit trail of all messages
+- **ig_following** — scraped following lists per guest (who they follow on IG)
+- **ig_follow_status** — bot's follow status per guest (pending, followed, requested, not_found, error)
+- **ig_notifications_sent** — dedup table for mutual connection notifications
 
 Quota enforcement uses atomic transactions in `db.use_quota()` plus a SQLite trigger as backup.
 

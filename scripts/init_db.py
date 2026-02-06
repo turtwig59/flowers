@@ -76,6 +76,46 @@ WHEN NEW.quota_used > 1
 BEGIN
     SELECT RAISE(ABORT, 'Quota exceeded: each guest can only invite one person');
 END;
+
+-- Instagram: Who each guest follows (scraped from Instagram)
+CREATE TABLE IF NOT EXISTS ig_following (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL,
+    guest_id INTEGER NOT NULL,
+    guest_handle TEXT NOT NULL,
+    follows_handle TEXT NOT NULL,
+    scraped_at INTEGER NOT NULL,
+    FOREIGN KEY (event_id) REFERENCES events(id),
+    FOREIGN KEY (guest_id) REFERENCES guests(id),
+    UNIQUE(event_id, guest_id, follows_handle)
+);
+CREATE INDEX IF NOT EXISTS idx_ig_following_lookup ON ig_following(event_id, follows_handle);
+
+-- Instagram: Bot's follow status per guest
+CREATE TABLE IF NOT EXISTS ig_follow_status (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL,
+    guest_id INTEGER NOT NULL,
+    handle TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    followed_at INTEGER,
+    scraped_at INTEGER,
+    following_count INTEGER DEFAULT 0,
+    error_message TEXT,
+    FOREIGN KEY (event_id) REFERENCES events(id),
+    FOREIGN KEY (guest_id) REFERENCES guests(id),
+    UNIQUE(event_id, guest_id)
+);
+
+-- Instagram: Prevent duplicate mutual connection notifications
+CREATE TABLE IF NOT EXISTS ig_notifications_sent (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL,
+    notified_guest_id INTEGER NOT NULL,
+    about_guest_id INTEGER NOT NULL,
+    sent_at INTEGER NOT NULL,
+    UNIQUE(event_id, notified_guest_id, about_guest_id)
+);
 """
 
 def init_database():

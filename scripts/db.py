@@ -378,6 +378,166 @@ class Database:
         finally:
             conn.close()
 
+    # ==================== Instagram Social Graph ====================
+
+    def upsert_ig_follow_status(self, event_id: int, guest_id: int, handle: str, status: str, **kwargs) -> None:
+        """Create or update Instagram follow status for a guest."""
+        now = int(time.time())
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO ig_follow_status (event_id, guest_id, handle, status, followed_at, scraped_at, following_count, error_message)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(event_id, guest_id) DO UPDATE SET
+                    status = excluded.status,
+                    followed_at = COALESCE(excluded.followed_at, ig_follow_status.followed_at),
+                    scraped_at = COALESCE(excluded.scraped_at, ig_follow_status.scraped_at),
+                    following_count = COALESCE(excluded.following_count, ig_follow_status.following_count),
+                    error_message = excluded.error_message
+                """,
+                (event_id, guest_id, handle, status,
+                 kwargs.get('followed_at'), kwargs.get('scraped_at'),
+                 kwargs.get('following_count', 0), kwargs.get('error_message'))
+            )
+
+    def get_ig_follow_status(self, event_id: int, guest_id: int) -> Optional[Dict[str, Any]]:
+        """Get Instagram follow status for a guest."""
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute(
+                "SELECT * FROM ig_follow_status WHERE event_id = ? AND guest_id = ?",
+                (event_id, guest_id)
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    def store_ig_following(self, event_id: int, guest_id: int, guest_handle: str, follows_handles: List[str]) -> int:
+        """Batch insert following list for a guest. Returns count inserted."""
+        now = int(time.time())
+        count = 0
+        with self.transaction() as conn:
+            for handle in follows_handles:
+                try:
+                    conn.execute(
+                        """
+                        INSERT OR IGNORE INTO ig_following (event_id, guest_id, guest_handle, follows_handle, scraped_at)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (event_id, guest_id, guest_handle, handle.lower(), now)
+                    )
+                    count += 1
+                except Exception:
+                    pass
+        return count
+
+    def find_followers_of(self, event_id: int, target_handle: str) -> List[Dict[str, Any]]:
+        """Find confirmed guests whose following list includes target_handle."""
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT g.id as guest_id, g.name, g.phone, g.instagram, ig.guest_handle
+                FROM ig_following ig
+                JOIN guests g ON ig.guest_id = g.id AND ig.event_id = g.event_id
+                WHERE ig.event_id = ? AND ig.follows_handle = ? AND g.status = 'confirmed'
+                """,
+                (event_id, target_handle.lower())
+            )
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    def has_notification_been_sent(self, event_id: int, notified_guest_id: int, about_guest_id: int) -> bool:
+        """Check if a mutual connection notification has already been sent."""
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute(
+                "SELECT 1 FROM ig_notifications_sent WHERE event_id = ? AND notified_guest_id = ? AND about_guest_id = ?",
+                (event_id, notified_guest_id, about_guest_id)
+            )
+            return cursor.fetchone() is not None
+        finally:
+            conn.close()
+
+    def record_notification_sent(self, event_id: int, notified_guest_id: int, about_guest_id: int) -> None:
+        """Record that a mutual connection notification was sent."""
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO ig_notifications_sent (event_id, notified_guest_id, about_guest_id, sent_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (event_id, notified_guest_id, about_guest_id, int(time.time()))
+            )
+
+    def get_social_graph(self, event_id: int) -> List[Dict[str, Any]]:
+        """Get all intra-event Instagram connections for host display."""
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT ig.guest_handle, ig.follows_handle, g.name as follower_name,
+                       g2.name as followed_name, g2.id as followed_guest_id
+                FROM ig_following ig
+                JOIN guests g ON ig.guest_id = g.id AND ig.event_id = g.event_id
+                JOIN guests g2 ON ig.event_id = g2.event_id AND LOWER(g2.instagram) = '@' || ig.follows_handle
+                WHERE ig.event_id = ?
+                ORDER BY ig.guest_handle, ig.follows_handle
+                """,
+                (event_id,)
+            )
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    def get_ig_stats(self, event_id: int) -> Dict[str, int]:
+        """Get Instagram-related stats for an event."""
+        conn = self.get_connection()
+        try:
+            # Guests with IG handles
+            cursor = conn.execute(
+                "SELECT COUNT(*) as c FROM guests WHERE event_id = ? AND instagram IS NOT NULL",
+                (event_id,)
+            )
+            with_ig = cursor.fetchone()['c']
+
+            # Scraped count
+            cursor = conn.execute(
+                "SELECT COUNT(*) as c FROM ig_follow_status WHERE event_id = ? AND scraped_at IS NOT NULL",
+                (event_id,)
+            )
+            scraped = cursor.fetchone()['c']
+
+            # Pending count
+            cursor = conn.execute(
+                "SELECT COUNT(*) as c FROM ig_follow_status WHERE event_id = ? AND (scraped_at IS NULL AND status != 'not_found' AND status != 'error')",
+                (event_id,)
+            )
+            pending = cursor.fetchone()['c']
+
+            # Connections count
+            cursor = conn.execute(
+                """
+                SELECT COUNT(*) as c
+                FROM ig_following ig
+                JOIN guests g2 ON ig.event_id = g2.event_id AND LOWER(g2.instagram) = '@' || ig.follows_handle
+                WHERE ig.event_id = ?
+                """,
+                (event_id,)
+            )
+            connections = cursor.fetchone()['c']
+
+            return {
+                'with_ig': with_ig,
+                'scraped': scraped,
+                'pending': pending,
+                'connections': connections,
+            }
+        finally:
+            conn.close()
+
     # ==================== Stats ====================
 
     def get_event_stats(self, event_id: int) -> Dict[str, int]:
