@@ -166,6 +166,41 @@ We switched from `imsg watch` to polling via `poll_imessage.py` because `imsg wa
 
 The poller must monitor ALL chat IDs (not just the host's). `poll_imessage.py` calls `imsg chats --json` to discover all conversations and polls each one.
 
+## Git Workflow
+
+This repo uses GitHub with git worktrees for parallel development. GitHub repo: https://github.com/turtwig59/flowers
+
+### Branch structure
+
+- `main` — stable branch, only updated via merged PRs
+- `agent1`, `agent2`, etc. — one branch per worktree, each used by a separate Claude Code instance
+
+### When you finish a task
+
+1. Run tests: `FLOWERS_TESTING=1 pytest tests/ -v`
+2. Commit your changes (stage specific files, not `git add -A`)
+3. Push your branch: `git push`
+4. Create a PR: `gh pr create --base main --title "Short title"`
+5. Tell the user the PR is ready
+
+### Before starting new work
+
+Sync with main so you have the latest code:
+```bash
+git fetch origin && git rebase origin/main
+```
+
+### Useful commands
+
+| Action | Command |
+|--------|---------|
+| Push | `git push` |
+| Create PR | `gh pr create --base main` |
+| List PRs | `gh pr list` |
+| View a PR | `gh pr view <number>` |
+| Merge a PR | `gh pr merge <number> --merge` |
+| Sync with main | `git fetch origin && git rebase origin/main` |
+
 ## Conventions
 
 - All phone numbers normalized to E.164 format before storage/comparison
