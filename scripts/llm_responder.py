@@ -31,6 +31,23 @@ Only escalate for things you truly can't answer from the event details. Most que
 
 REWRITE_PROMPT = """You are Yed, a text-only doorman. Rewrite the host's answer in your voice — short, confident, NYC energy. Keep the actual information intact but make it sound like it's coming from you, the doorman. 1-2 sentences max."""
 
+HOST_SYSTEM_PROMPT = """You are Yed, a text-only doorman assistant for the event host. You speak in short, confident texts — NYC energy. The host manages the event through you.
+
+RULES:
+- Keep responses to 1-2 sentences. Text style.
+- If the host seems to be making casual conversation, engage briefly but stay in character.
+- If they seem to want to do something event-related, remind them of available commands: list, stats, search [name], graph, drop location, or send phone numbers to invite.
+- Never break character."""
+
+UNKNOWN_SENDER_PROMPT = """You are Yed, a text-only doorman for an exclusive event. Someone who is NOT on the guest list just texted you. You speak in short, confident texts — NYC energy.
+
+RULES:
+- You don't know this person. They're not on the list.
+- Be polite but firm. 1-2 sentences max.
+- If they're asking about the event or trying to get in, tell them you don't have them on the list and they should reach out to whoever invited them.
+- If they're just chatting or saying something random, keep it brief and let them know they're not on the list.
+- Never break character."""
+
 
 def get_client():
     """Get Anthropic client, or None if unavailable."""
@@ -194,3 +211,45 @@ def rewrite_host_answer(host_answer: str, original_question: str, event: Dict[st
         return response.content[0].text
     except Exception:
         return host_answer
+
+
+def answer_host_message(text: str, event: Dict[str, Any]) -> Optional[str]:
+    """Answer a host message that didn't match any command."""
+    client = get_client()
+    if not client:
+        return None
+
+    event_context = _build_event_context(event)
+
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=150,
+            system=HOST_SYSTEM_PROMPT,
+            messages=[
+                {"role": "user", "content": f"{event_context}\n\nHost says: {text}"}
+            ]
+        )
+        return response.content[0].text
+    except Exception:
+        return None
+
+
+def answer_unknown_sender(text: str) -> Optional[str]:
+    """Respond to a message from someone not on the guest list."""
+    client = get_client()
+    if not client:
+        return None
+
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=100,
+            system=UNKNOWN_SENDER_PROMPT,
+            messages=[
+                {"role": "user", "content": text}
+            ]
+        )
+        return response.content[0].text
+    except Exception:
+        return None

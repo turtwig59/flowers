@@ -196,16 +196,17 @@ def handle_host_message(host_phone: str, text: str, event_id: int, vcard_data: d
     if phones:
         return handle_send_invites(event_id, phones)
 
-    # Default response for unrecognized host message
-    return (
-        "Host commands:\n"
-        "• list - Show guest list\n"
-        "• stats - Show statistics\n"
-        "• search [name] - Find guest\n"
-        "• graph - Instagram connections\n"
-        "• drop location - Trigger location drop\n"
-        "• Or send phone numbers to invite"
-    )
+    # No command matched — try LLM for a natural response
+    try:
+        from llm_responder import answer_host_message
+        event = db.get_event(event_id)
+        llm_response = answer_host_message(text, event)
+        if llm_response:
+            return llm_response
+    except Exception:
+        pass
+
+    return "I didn't catch that. Try 'list', 'stats', 'search [name]', 'graph', or 'drop location'."
 
 
 def handle_send_invites(event_id: int, phones: List[str]) -> str:
@@ -363,11 +364,4 @@ def _handle_guest_question_reply(host_phone: str, text: str, event_id: int, host
 
 def handle_unknown_host_command(text: str) -> str:
     """Handle unrecognized host command."""
-    return (
-        "I didn't understand that. Host commands:\n"
-        "• list - Show guest list\n"
-        "• stats - Show statistics\n"
-        "• search [name] - Find guest\n"
-        "• graph - Instagram connections\n"
-        "• drop location - Trigger location drop"
-    )
+    return "I didn't catch that. Try 'list', 'stats', 'search [name]', 'graph', or 'drop location'."

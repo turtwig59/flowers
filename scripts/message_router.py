@@ -160,7 +160,14 @@ def route_message(from_phone: str, text: str, event_id: Optional[int] = None, vc
     # Check if known guest
     guest = db.get_guest_by_phone(normalized_phone, event_id)
     if not guest:
-        return "Sorry, I don't recognize this number. Are you trying to RSVP to an event?"
+        try:
+            from llm_responder import answer_unknown_sender
+            llm_response = answer_unknown_sender(text)
+            if llm_response:
+                return llm_response
+        except Exception:
+            pass
+        return "I don't have you on the list. If you think this is a mistake, reach out to whoever invited you."
 
     # Block all interaction from expired guests
     if guest['status'] == 'expired':
