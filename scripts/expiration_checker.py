@@ -13,6 +13,10 @@ INVITE_EXPIRE_SECONDS = 3600    # 60 minutes
 PLUS_ONE_WARNING_SECONDS = 2700
 PLUS_ONE_EXPIRE_SECONDS = 3600
 
+# Only apply expiration to guests invited after this feature was deployed.
+# Prevents retroactive expiration of pre-existing guests.
+FEATURE_DEPLOY_TIME = 1770396900
+
 # Onboarding states where guest hasn't finished setup yet
 ONBOARDING_STATES = ('waiting_for_name', 'waiting_for_instagram')
 
@@ -41,11 +45,13 @@ def check_invite_expirations():
     pending_guests = db.get_guests(event_id, status='pending')
 
     for guest in pending_guests:
+        invited_at = guest['invited_at']
+        if invited_at < FEATURE_DEPLOY_TIME:
+            continue
+
         state_record = db.get_conversation_state(event_id, guest['phone'])
         if not state_record or state_record['state'] != 'waiting_for_response':
             continue
-
-        invited_at = guest['invited_at']
         elapsed = now - invited_at
         context = state_record.get('context', {}) or {}
 
@@ -84,6 +90,9 @@ def check_plus_one_expirations():
 
         responded_at = guest.get('responded_at')
         if not responded_at:
+            continue
+
+        if responded_at < FEATURE_DEPLOY_TIME:
             continue
 
         elapsed = now - responded_at

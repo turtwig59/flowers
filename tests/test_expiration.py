@@ -13,6 +13,7 @@ import time
 from db import Database, db as global_db
 from message_router import route_message
 from invite_sender import send_invite
+import expiration_checker
 from expiration_checker import (
     check_invite_expirations,
     check_plus_one_expirations,
@@ -21,6 +22,9 @@ from expiration_checker import (
     PLUS_ONE_WARNING_SECONDS,
     PLUS_ONE_EXPIRE_SECONDS,
 )
+
+# Disable deploy-time cutoff in tests so backdated timestamps work
+expiration_checker.FEATURE_DEPLOY_TIME = 0
 
 
 @pytest.fixture
