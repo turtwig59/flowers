@@ -162,6 +162,10 @@ def route_message(from_phone: str, text: str, event_id: Optional[int] = None, vc
     if not guest:
         return "Sorry, I don't recognize this number. Are you trying to RSVP to an event?"
 
+    # Block all interaction from expired guests
+    if guest['status'] == 'expired':
+        return "Sorry, your invite has expired."
+
     # Get conversation state
     state_record = db.get_conversation_state(event_id, normalized_phone)
     state = state_record['state'] if state_record else 'idle'

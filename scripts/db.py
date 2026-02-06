@@ -326,6 +326,22 @@ class Database:
         finally:
             conn.close()
 
+    def merge_conversation_context(self, event_id: int, phone: str, updates: Dict[str, Any]) -> None:
+        """Merge keys into existing conversation context without clobbering other keys."""
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "SELECT context FROM conversation_state WHERE event_id = ? AND phone = ?",
+                (event_id, phone)
+            )
+            row = cursor.fetchone()
+            if row:
+                existing = json.loads(row['context']) if row['context'] else {}
+                existing.update(updates)
+                conn.execute(
+                    "UPDATE conversation_state SET context = ? WHERE event_id = ? AND phone = ?",
+                    (json.dumps(existing), event_id, phone)
+                )
+
     # ==================== Message Log ====================
 
     def log_message(

@@ -45,6 +45,9 @@ def handle_invite_response(guest: Dict[str, Any], text: str, event_id: int) -> s
         waiting_for_response → waiting_for_name (if YES)
         waiting_for_response → idle (if NO, status=declined)
     """
+    if guest['status'] == 'expired':
+        return "Sorry, your invite has expired."
+
     if detect_yes(text):
         # Accept invite
         db.update_guest(guest['id'], status='confirmed')
@@ -277,6 +280,10 @@ def handle_plus_one_offer(guest: Dict[str, Any], text: str, event_id: int, vcard
         waiting_for_plus_one → waiting_for_contact (if YES)
         waiting_for_plus_one → idle (if NO)
     """
+    if guest['quota_used'] >= 2:
+        db.upsert_conversation_state(event_id, guest['phone'], 'idle', {'plus_one_expired': True})
+        return "Your invite window has closed. See you at the event!"
+
     # If they sent a vCard, treat as implicit "yes + here's the contact"
     if vcard_data and vcard_data.get('phone'):
         return handle_contact_submission(guest, text, event_id, vcard_data=vcard_data)

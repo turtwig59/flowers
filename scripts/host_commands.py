@@ -21,7 +21,8 @@ def get_status_emoji(status: str) -> str:
     return {
         'confirmed': '✅',
         'pending': '⏳',
-        'declined': '❌'
+        'declined': '❌',
+        'expired': '⏰'
     }.get(status, '❓')
 
 
@@ -41,14 +42,18 @@ def format_guest_list(event_id: int, style: str = 'tree') -> str:
 
     if style == 'stats':
         stats = db.get_event_stats(event_id)
-        return (
-            f"📊 {event['name']}\n\n"
-            f"✅ Confirmed: {stats['confirmed']}\n"
-            f"⏳ Pending: {stats['pending']}\n"
-            f"❌ Declined: {stats['declined']}\n"
-            f"📥 Total invited: {stats['total']}\n"
-            f"➕ +1s used: {stats['plus_ones_used']}"
-        )
+        lines = [
+            f"📊 {event['name']}\n",
+            f"✅ Confirmed: {stats['confirmed']}",
+            f"⏳ Pending: {stats['pending']}",
+            f"❌ Declined: {stats['declined']}",
+        ]
+        expired = stats.get('expired', 0)
+        if expired > 0:
+            lines.append(f"⏰ Expired: {expired}")
+        lines.append(f"📥 Total invited: {stats['total']}")
+        lines.append(f"➕ +1s used: {stats['plus_ones_used']}")
+        return '\n'.join(lines)
 
     elif style == 'simple':
         confirmed = [g for g in guests if g['status'] == 'confirmed']

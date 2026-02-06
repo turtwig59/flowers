@@ -10,6 +10,7 @@ import json
 import sys
 import os
 import time
+from expiration_checker import run_expiration_checks
 
 POLL_INTERVAL = 2
 
@@ -138,6 +139,9 @@ def main():
                     mid = messages[0].get("id", 0)
                     if mid > last_id:
                         last_id = mid
+
+            # Check for invite and +1 expirations
+            run_expiration_checks()
 
         except KeyboardInterrupt:
             print("\n🌸 Bot stopped.", flush=True)
