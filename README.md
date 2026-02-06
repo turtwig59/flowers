@@ -6,7 +6,7 @@ An iMessage party invite bot that manages cascading invitations with a +1 system
 
 **The Concept:**
 - Host sends 15 initial invites
-- Each person who accepts can invite exactly 1 friend
+- Each person who accepts can invite up to 2 friends
 - Bot manages the entire flow conversationally
 - Location revealed day-of with a dramatic two-part drop
 
@@ -22,7 +22,7 @@ An iMessage party invite bot that manages cascading invitations with a +1 system
 ### For Guests
 - ✅ Simple YES/NO responses
 - ✅ Natural Q&A about the event
-- ✅ One +1 invite to share
+- ✅ Two invites to share
 - ✅ Contact card or phone number submission
 - ✅ Location drop ritual (warning → 5 min → address)
 
@@ -152,7 +152,7 @@ Bot: Great! What's your name?
 
 Guest: Alice
 
-Bot: You get one invite to share. Want to invite someone?
+Bot: You get two invites to share. Want to invite someone?
 
 Guest: Yes please
 
@@ -161,6 +161,8 @@ Bot: Send me a contact card or their phone number.
 Guest: [sends contact card for Bob]
 
 Bot: Invite sent! I'll let you know when they respond.
+
+     You have one more invite. Want to invite someone else?
 ```
 
 ### Guest Asking Questions
@@ -172,7 +174,7 @@ Bot: Location drops at 6:30 PM on the day of.
 
 Guest: Can I bring someone?
 
-Bot: You get one invite to share! Want to invite someone now?
+Bot: You get two invites to share! Want to invite someone now?
 ```
 
 ### Host Managing Event
@@ -202,7 +204,7 @@ Host: search Alice
 
 Bot: 🔍 Results for 'Alice':
 
-     ✅ Alice (initial invite) · +1 used
+     ✅ Alice (initial invite) · invites 2/2
 ```
 
 ## Architecture
@@ -245,7 +247,7 @@ flowers/
 - Name (collected after acceptance)
 - Status (pending/confirmed/declined)
 - Invite tree (invited_by_phone)
-- Quota tracking (0 or 1)
+- Quota tracking (0, 1, or 2)
 
 **conversation_state**
 - Current state in conversation flow
@@ -349,7 +351,7 @@ Makes the flow predictable and debuggable:
 **Say This:**
 - "Reply YES to confirm"
 - "Send me a contact card"
-- "You get one invite to share"
+- "You get two invites to share"
 - "What's your name?"
 
 **Not This:**
@@ -370,9 +372,9 @@ python3 scripts/bot.py list
 ### Quota not enforcing
 ```bash
 # Check database
-sqlite3 data/flowers.db "SELECT * FROM guests WHERE quota_used = 1"
+sqlite3 data/flowers.db "SELECT * FROM guests WHERE quota_used > 0"
 
-# Should never have >1 +1 per guest
+# Should never have quota_used > 2
 ```
 
 ### Location drop not sending

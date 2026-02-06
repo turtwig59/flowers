@@ -67,7 +67,7 @@ You: YES
 Bot: Great! What's your name?
 
 You: Alice
-Bot: You get one invite to share. Want to invite someone?
+Bot: You get two invites to share. Want to invite someone?
 
 You: Yes
 Bot: Send me a contact card or their phone number.
@@ -82,7 +82,7 @@ You: Where is this?
 Bot: Location drops at 6:30 PM on the day of.
 
 You: Can I bring someone?
-Bot: You get one invite to share! Want to invite someone now?
+Bot: You get two invites to share! Want to invite someone now?
 ```
 
 ### As the Host
@@ -109,7 +109,7 @@ Bot: 📊 Spring Garden Party
 ```
 You: search Alice
 Bot: 🔍 Results for 'Alice':
-     ✅ Alice (initial invite) · +1 used
+     ✅ Alice (initial invite) · invites 2/2
 ```
 
 **Trigger location drop:**

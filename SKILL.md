@@ -6,14 +6,14 @@ user-invocable: false
 
 # Flowers - Party Invite Bot
 
-An iMessage bot that manages exclusive party invitations with a cascading +1 system. The host sends 15 initial invites, and each confirmed guest can invite exactly one friend, creating a controlled viral guest list.
+An iMessage bot that manages exclusive party invitations with a cascading invite system. The host sends 15 initial invites, and each confirmed guest can invite up to two friends, creating a controlled viral guest list.
 
 ## Core Capabilities
 
-- **Cascading Invites**: Host → 15 people → each can invite 1 friend
+- **Cascading Invites**: Host → 15 people → each can invite up to 2 friends
 - **Conversational Flow**: Natural Q&A with guests about the event
 - **Name Collection**: Collects guest names after they accept
-- **Strict Quota Enforcement**: Exactly 1 invite per confirmed guest
+- **Strict Quota Enforcement**: Up to 2 invites per confirmed guest
 - **Host-Only Guest List**: Search, stats, and full tree view
 - **Location Drop Ritual**: Two-part reveal with 5-minute timing
 
@@ -37,7 +37,7 @@ Use this bot when the user:
 **Key Phrases:**
 - "Reply YES to confirm or NO to decline"
 - "Send me a contact card or phone number"
-- "You get one invite to share"
+- "You get two invites to share"
 - "What's your name?"
 - "Location drops at [time] on the day of"
 
@@ -99,7 +99,7 @@ python3 scripts/bot.py drop-location \
 Guest: YES
 Bot: Great! What's your name?
 Guest: Alice
-Bot: You get one invite to share. Want to invite someone?
+Bot: You get two invites to share. Want to invite someone?
 Guest: Yes
 Bot: Send me a contact card or their phone number.
 Guest: [sends contact card]
@@ -112,7 +112,7 @@ Guest: Where is this?
 Bot: Location drops at 6:30 PM on the day of.
 
 Guest: Can I bring someone?
-Bot: You get one invite to share! Want to invite someone now?
+Bot: You get two invites to share! Want to invite someone now?
 ```
 
 **Declining:**
@@ -196,15 +196,15 @@ Guest conversation states:
 
 ## Quota Enforcement
 
-Each confirmed guest has `quota_used` (0 or 1):
-- ✅ Can invite: `status='confirmed'` AND `quota_used=0`
-- ❌ Already used: `quota_used=1`
+Each confirmed guest has `quota_used` (0, 1, or 2):
+- ✅ Can invite: `status='confirmed'` AND `quota_used < 2`
+- ❌ Already used both: `quota_used=2`
 - ❌ Not eligible: `status='pending'` or `status='declined'`
 
 Database-level locking prevents race conditions:
 ```sql
 SELECT ... FOR UPDATE  -- Lock row during invite
-UPDATE guests SET quota_used = 1  -- Atomic increment
+UPDATE guests SET quota_used = quota_used + 1  -- Atomic increment
 ```
 
 ## Location Drop
@@ -266,7 +266,7 @@ pytest tests/ -v
 2. Alice: "YES"
 3. Bot: "Great! What's your name?"
 4. Alice: "Alice"
-5. Bot: "You get one invite to share. Want to invite someone?"
+5. Bot: "You get two invites to share. Want to invite someone?"
 6. Alice: "Yes"
 7. Bot: "Send me a contact card or their phone number."
 8. Alice: [sends Bob's number]
@@ -290,7 +290,7 @@ Guest: "Where is this?"
 Bot: "Location drops at 6:30 PM on the day of."
 
 Guest: "Can I bring someone?"
-Bot: "You get one invite to share after you confirm."
+Bot: "You get two invites to share after you confirm."
 ```
 
 ## Troubleshooting
@@ -305,8 +305,8 @@ python3 scripts/bot.py create-event
 - Phone number must match exactly (E.164 format)
 
 **Quota not enforcing:**
-- Check database: `SELECT * FROM guests WHERE quota_used = 1`
-- Verify row locking is working (should never have >1 +1 per guest)
+- Check database: `SELECT * FROM guests WHERE quota_used > 0`
+- Verify row locking is working (should never have quota_used > 2)
 
 **Location drop not sending:**
 - Verify confirmed guests: `python3 scripts/bot.py stats`

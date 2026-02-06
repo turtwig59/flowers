@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Flowers is an iMessage party invite bot. The host creates an event, sends 15 initial invites, each accepted guest can invite exactly 1 friend (+1), and the location is revealed day-of with a two-part dramatic drop (warning message, then address 5 minutes later). The bot runs as a background process polling for iMessages via the `imsg` CLI tool.
+Flowers is an iMessage party invite bot. The host creates an event, sends 15 initial invites, each accepted guest can invite up to 2 friends, and the location is revealed day-of with a two-part dramatic drop (warning message, then address 5 minutes later). The bot runs as a background process polling for iMessages via the `imsg` CLI tool.
 
 ## Commands
 
@@ -147,7 +147,7 @@ iMessage contact cards arrive as attachments with `mime_type: "text/vcard"` and 
 
 SQLite at `data/flowers.db`. Schema in `scripts/init_db.py`. Seven tables:
 - **events** — event details, host_phone, status, rules (JSON)
-- **guests** — phone (E.164), name, instagram, status, invited_by_phone (invite tree), quota_used (0 or 1)
+- **guests** — phone (E.164), name, instagram, status, invited_by_phone (invite tree), quota_used (0, 1, or 2)
 - **conversation_state** — current state + context (JSON), keyed by (event_id, phone)
 - **message_log** — full audit trail of all messages
 - **ig_following** — scraped following lists per guest (who they follow on IG)
