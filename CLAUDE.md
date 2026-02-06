@@ -163,7 +163,7 @@ Tests use `tests/mock_imsg.py` to mock iMessage sending. `tests/conftest.py` aut
 ### Important: `imsg` CLI Syntax
 
 ```bash
-imsg send --to "yed.flowers@icloud.com" --text "message"
+imsg send --to "doorman@yed.flowers" --text "message"
 imsg history --chat-id <id> --limit <n> --json --attachments
 imsg chats --json
 ```
