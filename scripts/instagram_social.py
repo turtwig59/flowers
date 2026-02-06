@@ -13,6 +13,9 @@ from db import db
 
 logger = logging.getLogger(__name__)
 
+# Minimum seconds after follow before attempting rescan (30 minutes)
+RESCAN_INTERVAL = 1800
+
 # Background job queue (single worker to serialize browser access)
 _job_queue = queue.Queue()
 _worker_thread = None
@@ -60,15 +63,19 @@ def _ensure_worker():
 
 
 def _worker_loop():
-    """Background worker: process IG jobs one at a time."""
+    """Background worker: process IG jobs one at a time, sweep for rescans on idle."""
     while True:
         try:
             job = _job_queue.get(timeout=60)
         except queue.Empty:
-            return  # Exit thread after 60s idle
+            _queue_pending_rescans()
+            continue
 
         try:
-            _process_ig_job(job)
+            if job.get('type') == 'rescan':
+                _process_rescan_job(job)
+            else:
+                _process_ig_job(job)
         except Exception as e:
             logger.error(f"IG job error for @{job.get('handle')}: {e}")
         finally:
@@ -122,6 +129,45 @@ def _process_ig_job(job: dict) -> None:
                                following_count=len(following))
 
     # Step 5: Check mutual connections and notify
+    check_mutual_connections(event_id, handle, guest_id)
+
+
+def _queue_pending_rescans():
+    """Sweep DB for requested-but-unscraped accounts and re-queue them."""
+    try:
+        pending = db.get_pending_rescans(min_age_seconds=RESCAN_INTERVAL)
+        for row in pending:
+            job = {
+                'type': 'rescan',
+                'event_id': row['event_id'],
+                'guest_id': row['guest_id'],
+                'handle': row['handle'],
+            }
+            _job_queue.put(job)
+        if pending:
+            logger.info(f"Queued {len(pending)} IG rescans")
+    except Exception as e:
+        logger.error(f"Error queuing rescans: {e}")
+
+
+def _process_rescan_job(job: dict) -> None:
+    """Re-attempt scrape for a previously requested (private) account."""
+    event_id = job['event_id']
+    guest_id = job['guest_id']
+    handle = job['handle']
+
+    browser = _get_browser()
+    following = browser.scrape_following(handle)
+
+    if following is None:
+        # Still private — do nothing, will retry next sweep
+        return
+
+    # Scrape succeeded — store and check mutual connections
+    db.store_ig_following(event_id, guest_id, handle, following)
+    db.upsert_ig_follow_status(event_id, guest_id, handle, 'requested',
+                               scraped_at=int(time.time()),
+                               following_count=len(following))
     check_mutual_connections(event_id, handle, guest_id)
 
 
