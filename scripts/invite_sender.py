@@ -59,7 +59,7 @@ def send_invite(
             f"{INTRO}\n\n"
             f"{inviter_name} invited you to {event['name']} "
             f"on {format_date(event['event_date'])}, {event['time_window']}.\n\n"
-            f"Let me know if you'd like to come. You've got an hour to respond."
+            f"Let me know if you'd like to come — this invite expires in an hour."
         )
     else:
         # Initial invite (from host)
@@ -67,7 +67,7 @@ def send_invite(
             f"{INTRO}\n\n"
             f"Rishab invited you to {event['name']} "
             f"on {format_date(event['event_date'])}, {event['time_window']}.\n\n"
-            f"Let me know if you'd like to come. You've got an hour to respond."
+            f"Let me know if you'd like to come — this invite expires in an hour."
         )
 
     # Send via iMessage
