@@ -102,8 +102,7 @@ def handle_invite_response(guest: Dict[str, Any], text: str, event_id: int) -> s
         except Exception:
             pass
         # Still unclear
-        event = db.get_event(event_id)
-        return f"Reply YES to confirm for {event['name']} or NO to pass."
+        return "I didn't catch that — are you in or not?"
 
 
 def handle_name_collection(guest: Dict[str, Any], text: str, event_id: int) -> str:
